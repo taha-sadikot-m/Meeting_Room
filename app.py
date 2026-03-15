@@ -157,4 +157,4 @@ if __name__ == "__main__":
     print("=" * 55 + "\n")
 
     port = int(os.getenv("PORT", "8080"))
-    uvicorn.run("app:app", host="0.0.0.0", port=port, reload=False)
+    uvicorn.run(app, host="0.0.0.0", port=port, reload=False)
