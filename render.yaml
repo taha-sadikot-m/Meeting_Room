@@ -2,5 +2,8 @@ services:
   - type: web
     name: livekit-meeting-room
     env: python
+    plan: free
+    autoDeploy: true
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn app:app -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT
+    startCommand: python -m uvicorn app:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
