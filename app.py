@@ -156,4 +156,5 @@ if __name__ == "__main__":
     print("  Use the SAME room name, different usernames")
     print("=" * 55 + "\n")
 
-    uvicorn.run("app:app", host="0.0.0.0", port=8000, reload=True)
+    port = int(os.getenv("PORT", "8080"))
+    uvicorn.run("app:app", host="0.0.0.0", port=port, reload=False)
