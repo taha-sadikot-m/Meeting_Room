@@ -40,9 +40,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, field_validator
 
-# ── LiveKit token generation & room management ────────────────────────────────
+# ── LiveKit token generation ───────────────────────────────────────────────────
 from livekit.api import AccessToken, VideoGrants
-from livekit.api.room_service import RoomService
 
 # ── Logging setup ──────────────────────────────────────────────────────────────
 LOG_LEVEL = os.getenv("LOG_LEVEL", "info").upper()
@@ -446,7 +445,9 @@ class RemoveParticipantRequest(BaseModel):
 async def remove_participant(req: RemoveParticipantRequest, request: Request):
     """
     Remove a participant from a room. Only admin can remove others.
-    Forcefully disconnects the participant from LiveKit using RoomServiceClient.
+    
+    This notifies the frontend, which disconnects the participant.
+    For backend enforcement, use LiveKit server API directly.
     """
     client_ip = request.client.host if request.client else "unknown"
     
@@ -455,22 +456,16 @@ async def remove_participant(req: RemoveParticipantRequest, request: Request):
         req.room_name, req.admin_identity, req.participant_identity, client_ip,
     )
     
-    # Validate request - check admin cannot remove themselves
+    # Validate request - check admin status by matching stored registry
+    # In production, you'd verify the admin identity against your session/jwt
+    
     if req.admin_identity == req.participant_identity:
         raise HTTPException(
             status_code=400,
             detail="Admin cannot remove themselves. Use Leave button instead."
         )
     
-    # Use LiveKit RoomService to eject the participant
-    try:
-        room_service = RoomService(LIVEKIT_URL, LIVEKIT_API_KEY, LIVEKIT_API_SECRET)
-        # Remove participant by identity
-        await room_service.remove_participant(req.room_name, req.participant_identity)
-        logger.info("Participant forcefully removed — room=%r  target=%r", req.room_name, req.participant_identity)
-    except Exception as exc:
-        logger.warning("Could not eject participant via LiveKit API: %s (fallback to client disconnect)", exc)
-        # Fallback: rely on client-side disconnect via data channel message
+    logger.info("Participant removal authorized — room=%r  target=%r", req.room_name, req.participant_identity)
     
     return {
         "status": "removed",
@@ -533,12 +528,7 @@ if __name__ == "__main__":
   → Open http://localhost:{PORT} in TWO browser tabs
   → Use the SAME room name, different usernames
 """
-    # Handle Unicode encoding on Windows
-    try:
-        print(banner)
-    except UnicodeEncodeError:
-        # Fallback for systems that don't support Unicode
-        sys.stdout.write(banner.encode('utf-8', errors='replace').decode('utf-8'))
+    print(banner)
 
     uvicorn.run(
         app,

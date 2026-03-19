@@ -212,7 +212,7 @@ body {
 .video-stage { flex: 1; min-width: 0; display: flex; flex-direction: column; background: var(--bg); overflow: hidden; }
 
 /* Video grid */
-.video-grid { flex: 1; padding: 10px; display: grid; grid-template-columns: repeat(2,1fr); gap: 8px; align-items: center; justify-items: center; overflow: hidden; min-height: 0; }
+.video-grid { flex: 1; padding: 10px; display: grid; grid-template-columns: repeat(2,1fr); gap: 8px; align-content: center; overflow: hidden; min-height: 0; }
 .video-grid.grid-1 { grid-template-columns: 1fr; max-width: 960px; margin: 0 auto; width: 100%; }
 .video-grid.grid-2 { grid-template-columns: repeat(2,1fr); }
 .video-grid.grid-3, .video-grid.grid-4 { grid-template-columns: repeat(2,1fr); }
@@ -1316,7 +1316,7 @@ function syncParticipantsList() {
     
     // Kick button (only show if user is admin and target is not self)
     const kickBtn = (isRoomAdmin && !isLocal) ? 
-      `<button onclick="kickParticipant('${participantIdentity.replace(/'/g, "\\'")}', '${name.replace(/'/g, "\\'")}')" style="background:rgba(184,96,96,0.2);border:none;color:var(--red-lt);padding:0.25rem 0.5rem;border-radius:3px;font-size:0.65rem;cursor:pointer;transition:all 0.2s;" onmouseover="this.style.background='rgba(184,96,96,0.35)'" onmouseout="this.style.background='rgba(184,96,96,0.2)'">Remove</button>`
+      `<button onclick="kickParticipant('${escapeHtml(participantIdentity)}', '${escapeHtml(name)}')" style="background:rgba(184,96,96,0.2);border:none;color:var(--red-lt);padding:0.25rem 0.5rem;border-radius:3px;font-size:0.65rem;cursor:pointer;transition:all 0.2s;" onmouseover="this.style.background='rgba(184,96,96,0.35)'" onmouseout="this.style.background='rgba(184,96,96,0.2)'">Remove</button>`
       : '';
     
     row.innerHTML = `
