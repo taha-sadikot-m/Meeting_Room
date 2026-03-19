@@ -126,6 +126,14 @@ body {
 .lobby-form-panel h3 { font-size: 1rem; font-weight: 500; color: var(--tx-1); margin-bottom: 0.35rem; }
 .lobby-form-panel .form-sub { font-size: 0.8rem; color: var(--tx-3); margin-bottom: 1.8rem; font-weight: 300; }
 
+.lobby-mode-tabs { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; background: var(--bg-3); border-radius: var(--r-md); padding: 0.3rem; }
+.mode-tab { flex: 1; padding: 0.5rem 1rem; background: transparent; border: none; border-radius: calc(var(--r-md) - 2px); color: var(--tx-3); font-family: var(--ff-ui); font-size: 0.75rem; font-weight: 500; letter-spacing: 0.05em; cursor: pointer; transition: all 0.2s; }
+.mode-tab:hover { color: var(--tx-2); }
+.mode-tab.active { background: var(--amber-dim); color: var(--amber); }
+
+.lobby-mode-content { display: none; }
+.lobby-mode-content.active { display: block; }
+
 .field { margin-bottom: 1rem; }
 .field label { display: block; font-size: 0.7rem; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: var(--tx-3); margin-bottom: 0.45rem; }
 .field-input-wrap { position: relative; }
@@ -474,38 +482,89 @@ body {
     </div>
 
     <div class="lobby-form-panel">
-      <h3>Join a meeting</h3>
-      <p class="form-sub">Enter a room name and your display name to get started.</p>
-
-      <div class="field">
-        <label>Room Name</label>
-        <div class="field-input-wrap">
-          <span class="field-icon"><svg width="15" height="15"><use href="#ic-room"/></svg></span>
-          <input id="room-input" type="text" placeholder="e.g. design-review" autocomplete="off" spellcheck="false"/>
-        </div>
+      <div class="lobby-mode-tabs">
+        <button class="mode-tab active" id="mode-join-tab" onclick="switchMode('join')">Join Room</button>
+        <button class="mode-tab" id="mode-create-tab" onclick="switchMode('create')">Create Room</button>
       </div>
 
-      <div class="field">
-        <label>Your Name</label>
-        <div class="field-input-wrap">
-          <span class="field-icon"><svg width="15" height="15"><use href="#ic-user"/></svg></span>
-          <input id="name-input" type="text" placeholder="e.g. Alice" autocomplete="off"/>
+      <!-- Join Room Mode -->
+      <div id="mode-join" class="lobby-mode-content active">
+        <h3>Join a meeting</h3>
+        <p class="form-sub">Enter room details to get started.</p>
+
+        <div class="field">
+          <label>Room Name</label>
+          <div class="field-input-wrap">
+            <span class="field-icon"><svg width="15" height="15"><use href="#ic-room"/></svg></span>
+            <input id="room-input" type="text" placeholder="e.g. design-review" autocomplete="off" spellcheck="false"/>
+          </div>
         </div>
+
+        <div class="field">
+          <label>Your Name</label>
+          <div class="field-input-wrap">
+            <span class="field-icon"><svg width="15" height="15"><use href="#ic-user"/></svg></span>
+            <input id="name-input" type="text" placeholder="e.g. Alice" autocomplete="off"/>
+          </div>
+        </div>
+
+        <button class="btn-join" id="join-btn" onclick="joinRoom()">
+          <span class="btn-icon"><svg width="16" height="16"><use href="#ic-arrow-right"/></svg></span>
+          <span class="btn-text">Join Room</span>
+          <div class="spinner"></div>
+        </button>
+
+        <div id="error-msg"></div>
+
+        <div class="lobby-divider"><span>private &amp; encrypted</span></div>
+        <p class="lobby-hint">
+          <svg width="12" height="12" style="vertical-align:-2px;margin-right:4px;opacity:.45"><use href="#ic-lock"/></svg>
+          Join using a room name and your display name.
+        </p>
       </div>
 
-      <button class="btn-join" id="join-btn" onclick="joinRoom()">
-        <span class="btn-icon"><svg width="16" height="16"><use href="#ic-arrow-right"/></svg></span>
-        <span class="btn-text">Join Room</span>
-        <div class="spinner"></div>
-      </button>
+      <!-- Create Room Mode -->
+      <div id="mode-create" class="lobby-mode-content">
+        <h3>Create a meeting</h3>
+        <p class="form-sub">Generate a unique room with a shareable link.</p>
 
-      <div id="error-msg"></div>
+        <div class="field">
+          <label>Room Name</label>
+          <div class="field-input-wrap">
+            <span class="field-icon"><svg width="15" height="15"><use href="#ic-room"/></svg></span>
+            <input id="create-room-input" type="text" placeholder="e.g. team-sync" autocomplete="off" spellcheck="false"/>
+          </div>
+        </div>
 
-      <div class="lobby-divider"><span>private &amp; encrypted</span></div>
-      <p class="lobby-hint">
-        <svg width="12" height="12" style="vertical-align:-2px;margin-right:4px;opacity:.45"><use href="#ic-lock"/></svg>
-        Only people with the room name can join.
-      </p>
+        <button class="btn-join" id="create-btn" onclick="createRoom()">
+          <span class="btn-icon"><svg width="16" height="16"><use href="#ic-arrow-right"/></svg></span>
+          <span class="btn-text">Generate Link</span>
+          <div class="spinner"></div>
+        </button>
+
+        <div id="create-error-msg"></div>
+
+        <div id="room-created-info" style="display:none; margin-top: 1.2rem; padding: 0.9rem; background: var(--green-dim); border: 1px solid rgba(106,170,122,0.25); border-radius: var(--r-md);">
+          <div style="font-size: 0.75rem; color: var(--tx-3); font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 0.5rem;">Room Created</div>
+          <div style="font-size: 0.8rem; color: var(--tx-2); margin-bottom: 0.8rem; word-break: break-all;">
+            <strong id="created-room-name"></strong> <br>
+            <span style="color: var(--tx-3);">ID: <code id="created-room-id" style="background: rgba(0,0,0,0.2); padding: 0.15rem 0.4rem; border-radius: 3px; font-family: monospace; font-size: 0.75rem;"></code></span>
+          </div>
+          <div style="display: flex; gap: 0.5rem; margin-bottom: 0.8rem;">
+            <input type="text" id="meeting-url-display" readonly style="flex:1; background: var(--bg-3); border: 1px solid var(--bdr); border-radius: var(--r-sm); padding: 0.5rem 0.7rem; font-size: 0.75rem; color: var(--tx-2); font-family: monospace; cursor: text;"/>
+            <button onclick="copyMeetingUrl()" style="padding: 0.5rem 0.8rem; background: var(--green); border: none; border-radius: var(--r-sm); color: #1a1510; font-size: 0.75rem; font-weight: 600; cursor: pointer; white-space: nowrap;">Copy</button>
+          </div>
+          <button class="btn-join" id="join-created-btn" onclick="joinCreatedRoom()" style="margin-top: 0.5rem;">
+            <span class="btn-text">Join This Room</span>
+          </button>
+        </div>
+
+        <div class="lobby-divider"><span>instant &amp; unique</span></div>
+        <p class="lobby-hint">
+          <svg width="12" height="12" style="vertical-align:-2px;margin-right:4px;opacity:.45"><use href="#ic-lock"/></svg>
+          Share the link with others. Each room has a unique ID.
+        </p>
+      </div>
     </div>
 
   </div>
@@ -628,10 +687,21 @@ body {
    STATE
 ════════════════════════════════════════════ */
 let lkRoom = null, micEnabled = true, camEnabled = true;
+let isJoiningRoom = false; // Prevent double-join attempts
 const tiles = {}, participantNames = {};
 const textEncoder = new TextEncoder(), textDecoder = new TextDecoder();
 let localDisplayName = '', sidebarOpen = false, activeTab = 'chat';
 let callStartTime = null, clockInterval = null;
+
+/* ════════════════════════════════════════════
+   LOGGER
+════════════════════════════════════════════ */
+const logger = {
+  info: (msg, ...args) => console.log(`[INFO] ${msg}`, ...args),
+  debug: (msg, ...args) => console.log(`[DEBUG] ${msg}`, ...args),
+  warn: (msg, ...args) => console.warn(`[WARN] ${msg}`, ...args),
+  error: (msg, ...args) => console.error(`[ERROR] ${msg}`, ...args),
+};
 
 /* ════════════════════════════════════════════
    UTILITIES
@@ -643,9 +713,111 @@ function showToast(msg, dur = 2800) {
 }
 function showError(msg) { const el = document.getElementById('error-msg'); el.textContent = msg; el.style.display = 'block'; }
 function hideError() { document.getElementById('error-msg').style.display = 'none'; }
+function showCreateError(msg) { const el = document.getElementById('create-error-msg'); el.textContent = msg; el.style.display = 'block'; }
+function hideCreateError() { document.getElementById('create-error-msg').style.display = 'none'; }
 function setJoinLoading(v) { const btn = document.getElementById('join-btn'); btn.classList.toggle('loading', v); btn.disabled = v; }
+function setCreateLoading(v) { const btn = document.getElementById('create-btn'); btn.classList.toggle('loading', v); btn.disabled = v; }
 function getInitials(name = '?') { return name.trim().split(/\s+/).map(w => w[0]).join('').toUpperCase().slice(0, 2) || '?'; }
 function escapeHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+/* ════════════════════════════════════════════
+   LOBBY MODE MANAGEMENT
+════════════════════════════════════════════ */
+function switchMode(mode) {
+  const joinTab = document.getElementById('mode-join-tab');
+  const createTab = document.getElementById('mode-create-tab');
+  const joinContent = document.getElementById('mode-join');
+  const createContent = document.getElementById('mode-create');
+  
+  if (mode === 'join') {
+    joinTab.classList.add('active');
+    createTab.classList.remove('active');
+    joinContent.classList.add('active');
+    createContent.classList.remove('active');
+  } else {
+    joinTab.classList.remove('active');
+    createTab.classList.add('active');
+    joinContent.classList.remove('active');
+    createContent.classList.add('active');
+  }
+}
+
+async function createRoom() {
+  hideCreateError();
+  const roomName = document.getElementById('create-room-input').value.trim();
+  if (!roomName) { showCreateError('Please enter a room name.'); return; }
+  
+  setCreateLoading(true);
+  try {
+    const res = await fetch('/create-room', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ room_name: roomName })
+    });
+    
+    if (!res.ok) {
+      const e = await res.json().catch(() => ({}));
+      throw new Error(e.detail || 'Failed to create room');
+    }
+    
+    const data = await res.json();
+    window.createdRoomData = data;
+    
+    // Display the created room info
+    document.getElementById('created-room-name').textContent = data.room_name;
+    document.getElementById('created-room-id').textContent = data.room_id;
+    document.getElementById('meeting-url-display').value = data.meeting_url;
+    document.getElementById('room-created-info').style.display = 'block';
+    
+    showToast(`Room created! Share the link with others.`);
+    logger.info("Room created: %s (%s)", data.room_name, data.room_id);
+  } catch (err) {
+    console.error(err);
+    showCreateError(err.message || 'Could not create room. Check server logs.');
+  } finally {
+    setCreateLoading(false);
+  }
+}
+
+function copyMeetingUrl() {
+  const input = document.getElementById('meeting-url-display');
+  input.select();
+  document.execCommand('copy');
+  showToast('Meeting link copied to clipboard!');
+}
+
+async function joinCreatedRoom() {
+  if (!window.createdRoomData) return;
+  const roomName = window.createdRoomData.room_name;
+  
+  // Switch to join mode and pre-fill
+  switchMode('join');
+  document.getElementById('room-input').value = roomName;
+  document.getElementById('name-input').focus();
+  showToast('Enter your name to join');
+}
+
+/* ════════════════════════════════════════════
+   URL PARAMETER HANDLING
+════════════════════════════════════════════ */
+function getUrlParams() {
+  const params = new URLSearchParams(window.location.search);
+  return {
+    room: params.get('room'),
+    id: params.get('id')
+  };
+}
+
+function handleUrlParams() {
+  const params = getUrlParams();
+  if (params.room) {
+    // Auto-fill room name from URL
+    document.getElementById('room-input').value = params.room;
+    switchMode('join');
+    document.getElementById('name-input').focus();
+    showToast('Room name pre-filled from link');
+  }
+}
 
 function startClock() {
   callStartTime = Date.now();
@@ -810,26 +982,128 @@ function isParticipantPublishingVideo(sid) {
 }
 
 /* ════════════════════════════════════════════
+   DEVICE PERMISSION CHECK
+════════════════════════════════════════════ */
+async function checkDevicePermissions() {
+  try {
+    const permissions = await navigator.permissions.query({ name: 'camera' });
+    const audioPermissions = await navigator.permissions.query({ name: 'microphone' });
+    
+    if (permissions.state === 'denied') {
+      throw new Error('Camera access is blocked. Please enable camera permissions in your browser settings.');
+    }
+    if (audioPermissions.state === 'denied') {
+      throw new Error('Microphone access is blocked. Please enable microphone permissions in your browser settings.');
+    }
+    return true;
+  } catch (err) {
+    // Browser doesn't support permissions API, continue anyway
+    logger.debug("Permissions API not available, continuing with join");
+    return true;
+  }
+}
+
+/* ════════════════════════════════════════════
    JOIN
 ════════════════════════════════════════════ */
 async function joinRoom() {
+  // Prevent double-join attempts
+  if (isJoiningRoom) {
+    showError('Already joining a room. Please wait...');
+    return;
+  }
+  
   hideError();
   const roomName = document.getElementById('room-input').value.trim();
   const userName = document.getElementById('name-input').value.trim();
   if (!roomName) { showError('Please enter a room name.'); return; }
   if (!userName) { showError('Please enter your display name.'); return; }
+  
   localDisplayName = userName;
+  isJoiningRoom = true;
   setJoinLoading(true);
+  
+  let connectionTimeout;
+  
   try {
-    const res = await fetch('/token', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ room_name: roomName, participant_name: userName }) });
-    if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.detail || 'Failed to get token'); }
+    // Check device permissions first
+    logger.info("Checking device permissions...");
+    await checkDevicePermissions();
+    
+    // Get token
+    logger.info("Requesting access token for room: %s", roomName);
+    const params = getUrlParams();
+    const tokenRequest = {
+      room_name: roomName,
+      participant_name: userName,
+      room_id: params.id || null
+    };
+    
+    const res = await fetch('/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(tokenRequest)
+    });
+    
+    if (!res.ok) { 
+      const e = await res.json().catch(() => ({})); 
+      throw new Error(e.detail || 'Failed to get access token'); 
+    }
     const { token, livekit_url } = await res.json();
+    logger.info("Token received, connecting to LiveKit...");
 
-    lkRoom = new LivekitClient.Room({ adaptiveStream: true, dynacast: true, videoCaptureDefaults: { resolution: LivekitClient.VideoPresets.h720.resolution } });
+    // Create room with timeout protection
+    lkRoom = new LivekitClient.Room({ 
+      adaptiveStream: true, 
+      dynacast: true, 
+      videoCaptureDefaults: { resolution: LivekitClient.VideoPresets.h720.resolution } 
+    });
+    
     wireRoomEvents();
+    
+    // Set connection timeout (30 seconds)
+    connectionTimeout = setTimeout(() => {
+      if (lkRoom && !lkRoom.isConnected) {
+        lkRoom.disconnect().catch(() => {});
+        lkRoom = null;
+        throw new Error('Connection timeout. Please check your network and try again.');
+      }
+    }, 30000);
+    
+    logger.info("Connecting to LiveKit server...");
     await lkRoom.connect(livekit_url, token);
-    await lkRoom.localParticipant.enableCameraAndMicrophone();
+    clearTimeout(connectionTimeout);
+    
+    if (!lkRoom) throw new Error('Connection lost unexpectedly');
+    logger.info("Connected to LiveKit, enabling devices...");
+    
+    // Try to enable camera and microphone, but don't fail if they're not available
+    try {
+      await Promise.race([
+        lkRoom.localParticipant.enableCameraAndMicrophone(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Device setup timeout')), 15000))
+      ]);
+      logger.info("Devices enabled successfully");
+    } catch (devErr) {
+      logger.warn("Device setup warning: %s", devErr.message);
+      // If device setup fails, try to recover by disabling audio/video
+      try {
+        await lkRoom.localParticipant.setCameraEnabled(false);
+        await lkRoom.localParticipant.setMicrophoneEnabled(false);
+        micEnabled = false;
+        camEnabled = false;
+        logger.warn("Continuing without audio/video due to device error: %s", devErr.message);
+        showToast('Joined without audio/video. Check device permissions.');
+      } catch (fallbackErr) {
+        // Even that failed, disconnect
+        await lkRoom.disconnect();
+        lkRoom = null;
+        throw new Error('Could not access devices. ' + devErr.message);
+      }
+    }
 
+    // Only show room UI AFTER successful connection AND device setup/fallback
+    logger.info("Transitioning to room view...");
     document.getElementById('lobby').style.display = 'none';
     document.getElementById('room').style.display = 'flex';
     document.getElementById('room-title').textContent = roomName;
@@ -841,11 +1115,40 @@ async function joinRoom() {
 
     for (const [, p] of lkRoom.remoteParticipants) onParticipantConnected(p);
 
-    updateParticipantCount(); startClock();
+    updateParticipantCount(); 
+    startClock();
+    logger.info("Successfully joined room: %s", roomName);
     showToast('Connected to room');
+    
   } catch (err) {
-    console.error(err); showError(err.message || 'Could not join. Check server logs.');
-  } finally { setJoinLoading(false); }
+    clearTimeout(connectionTimeout);
+    logger.error("Join error: %s", err.message);
+    
+    // Clean up failed connection
+    if (lkRoom) {
+      try {
+        await lkRoom.disconnect();
+      } catch (dcErr) {
+        logger.debug("Error during cleanup disconnect: %s", dcErr.message);
+      }
+      lkRoom = null;
+    }
+    
+    // Show user-friendly error message
+    let errorMsg = err.message || 'Could not join room. Please try again.';
+    if (errorMsg.includes('Device') || errorMsg.includes('permission')) {
+      errorMsg = 'Camera/Microphone access denied. Allow permissions in browser settings and try again.';
+    } else if (errorMsg.includes('timeout')) {
+      errorMsg = 'Connection timeout. Check your internet and try again.';
+    } else if (errorMsg.includes('401') || errorMsg.includes('unauthorized')) {
+      errorMsg = 'Invalid room credentials. Contact the room organizer.';
+    }
+    showError(errorMsg);
+    
+  } finally { 
+    isJoiningRoom = false;
+    setJoinLoading(false); 
+  }
 }
 
 /* ════════════════════════════════════════════
@@ -957,7 +1260,20 @@ async function toggleCam() {
 /* ════════════════════════════════════════════
    LEAVE
 ════════════════════════════════════════════ */
-async function leaveRoom() { if (lkRoom) { await lkRoom.disconnect(); lkRoom = null; } resetToLobby(); }
+async function leaveRoom() { 
+  if (lkRoom) { 
+    try {
+      logger.info("Disconnecting from room...");
+      await lkRoom.disconnect(); 
+      lkRoom = null;
+      logger.info("Disconnected successfully");
+    } catch (err) {
+      logger.error("Error during disconnect: %s", err.message);
+      lkRoom = null;
+    }
+  } 
+  resetToLobby(); 
+}
 
 function resetToLobby() {
   stopClock();
@@ -982,6 +1298,7 @@ function resetToLobby() {
   document.getElementById('cam-label').textContent = 'Camera';
   document.getElementById('room').style.display = 'none';
   document.getElementById('lobby').style.display = 'flex';
+  hideError();
 }
 
 /* ════════════════════════════════════════════
@@ -1002,6 +1319,23 @@ document.addEventListener('click', (e) => {
   const sb = document.getElementById('room-sidebar'), ctrl = document.querySelector('.room-controls');
   if (!sb.contains(e.target) && !ctrl.contains(e.target)) toggleSidebar(activeTab);
 });
+
+/* ════════════════════════════════════════════
+   INITIALIZATION
+════════════════════════════════════════════ */
+// Handle URL parameters on page load
+document.addEventListener('DOMContentLoaded', () => {
+  handleUrlParams();
+});
+
+// If DOM is already loaded (cached page)
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => {
+    handleUrlParams();
+  });
+} else {
+  handleUrlParams();
+}
 </script>
 </body>
 </html>

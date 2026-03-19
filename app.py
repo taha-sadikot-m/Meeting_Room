@@ -135,6 +135,7 @@ async def on_startup():
 class TokenRequest(BaseModel):
     room_name: str = Field(..., min_length=1, max_length=128)
     participant_name: str = Field(..., min_length=1, max_length=64)
+    room_id: Optional[str] = Field(None, min_length=1, max_length=36)
 
     @field_validator("room_name", "participant_name", mode="before")
     @classmethod
@@ -156,6 +157,30 @@ class TokenResponse(BaseModel):
     livekit_url: str
 
 
+class RoomCreateRequest(BaseModel):
+    room_name: str = Field(..., min_length=1, max_length=128)
+    
+    @field_validator("room_name", mode="before")
+    @classmethod
+    def strip_whitespace(cls, v: str) -> str:
+        return v.strip()
+
+    @field_validator("room_name")
+    @classmethod
+    def sanitise_room_name(cls, v: str) -> str:
+        # Allow alphanumeric, hyphens, underscores, dots, spaces
+        allowed = set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_. ")
+        if not all(c in allowed for c in v):
+            raise ValueError("Room name may only contain letters, numbers, hyphens, underscores, dots, and spaces.")
+        return v
+
+
+class RoomCreateResponse(BaseModel):
+    room_id: str
+    room_name: str
+    meeting_url: str
+
+
 # ── Routes ─────────────────────────────────────────────────────────────────────
 
 @app.get("/", response_class=HTMLResponse, include_in_schema=False)
@@ -166,6 +191,38 @@ async def serve_frontend():
         logger.error("index.html not found at %s", html_path)
         raise HTTPException(status_code=404, detail="index.html not found")
     return HTMLResponse(content=html_path.read_text(encoding="utf-8"))
+
+
+@app.post("/create-room", response_model=RoomCreateResponse)
+async def create_room(req: RoomCreateRequest, request: Request):
+    """
+    Create a new meeting room with a unique ID.
+    
+    Returns:
+      - room_id: Unique identifier for the room (UUID)
+      - room_name: The name of the room
+      - meeting_url: Shareable URL to join the room
+    """
+    client_ip = request.client.host if request.client else "unknown"
+    room_id = str(uuid.uuid4())
+    
+    logger.info(
+        "Room creation request — room_name=%r  room_id=%r  ip=%s",
+        req.room_name, room_id, client_ip,
+    )
+    
+    # Construct the shareable URL
+    # Format: http://localhost:8080/?room=<room_name>&id=<room_id>
+    protocol = request.headers.get("x-forwarded-proto", "http")
+    host = request.headers.get("host", request.client.host if request.client else "localhost:8080")
+    meeting_url = f"{protocol}://{host}/?room={req.room_name}&id={room_id}"
+    
+    logger.debug("Created room — url=%s", meeting_url)
+    return RoomCreateResponse(
+        room_id=room_id,
+        room_name=req.room_name,
+        meeting_url=meeting_url
+    )
 
 
 @app.post("/token", response_model=TokenResponse)
@@ -180,8 +237,8 @@ async def get_token(req: TokenRequest, request: Request):
     """
     client_ip = request.client.host if request.client else "unknown"
     logger.info(
-        "Token request — room=%r  participant=%r  ip=%s",
-        req.room_name, req.participant_name, client_ip,
+        "Token request — room=%r  participant=%r  room_id=%r  ip=%s",
+        req.room_name, req.participant_name, req.room_id, client_ip,
     )
 
     # Unique identity prevents collisions when the same display name joins twice
